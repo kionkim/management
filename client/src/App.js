@@ -3,6 +3,8 @@ import logo from './logo.svg';
 import './App.css';
 import Paper from '@material-ui/core/Paper';
 import Customer from './components/Customer';
+import ChatApp from './components/chat';
+import HighChart from './components/highchart';
 import Table from '@material-ui/core/Table';
 import TableHead from '@material-ui/core/TableHead';
 import TableBody from '@material-ui/core/TableBody';
@@ -10,7 +12,9 @@ import TableRow from '@material-ui/core/TableRow';
 import TableCell from '@material-ui/core/TableCell';
 
 import { withStyles } from '@material-ui/core/styles';
+import StockChart from './components/StockChart';
 
+import CircularProgress from '@material-ui/core/CircularProgress';
 const styles = (theme) => ({
 	root: {
 		width: '100%',
@@ -19,41 +23,52 @@ const styles = (theme) => ({
 	},
 	table: {
 		minWidth: 1080
+	},
+	progress: {
+		margin: theme.spacing.unit * 2
 	}
 });
 //property
 
-const customer = [
-	{
-		id: 1,
-		name: 'kionkim',
-		image: 'https://placeimg.com/64/64/any',
-		birthday: '961222',
-		gender: 'male',
-		job: 'student'
-	},
-	{
-		id: 2,
-		name: 'kionkim',
-		image: 'https://placeimg.com/64/64/any',
-		birthday: '961221',
-		gender: 'male',
-		job: 'student'
-	},
-	{
-		id: 3,
-		name: 'kionkim',
-		image: 'https://placeimg.com/64/64/any',
-		birthday: '961220',
-		gender: 'male',
-		job: 'student'
-	}
-];
 class App extends Component {
+	state = {
+		customers: '',
+		options: '',
+		completed: 0
+	};
+
+	componentDidMount() {
+		this.timer = setInterval(this.progress, 20);
+		this.callApi().then((res) => this.setState({ customers: res })).catch((err) => console.log(err));
+		this.getHighChartData().then((res) => this.setState({ options: res })).catch((err) => console.log(err));
+	}
+
+	callApi = async () => {
+		const response = await fetch('/api/customers');
+		// console.log(response.text());
+		const body = await response.json();
+		//console.log('body = ' + JSON.stringify(body));
+		return body;
+	};
+
+	progress = () => {
+		const { completed } = this.state;
+		this.setState({ completed: completed >= 100 ? 0 : completed + 1 });
+	};
+	getHighChartData = async () => {
+		const response = await fetch('/api/chart_data');
+		const series = await response.json();
+		console.log('series = ' + JSON.stringify(series));
+		return series;
+	};
+
 	render() {
 		const { classes } = this.props;
 		return (
 			<Paper className={classes.root}>
+				<ChatApp />
+				<HighChart options={this.state.options} />
+				<StockChart />
 				<Table className={classes.table}>
 					<TableHead>
 						<TableRow>
@@ -66,19 +81,31 @@ class App extends Component {
 						</TableRow>
 					</TableHead>
 					<TableBody>
-						{customer.map((c) => {
-							return (
-								<Customer
-									key={c.id}
-									id={c.id}
-									image={c.image}
-									name={c.name}
-									birthday={c.birthday}
-									gender={c.gender}
-									job={c.job}
-								/>
-							);
-						})}
+						{this.state.customers ? (
+							this.state.customers.map((c) => {
+								return (
+									<Customer
+										key={c.id}
+										id={c.id}
+										image={c.image}
+										name={c.name}
+										birthday={c.birthday}
+										gender={c.gender}
+										job={c.job}
+									/>
+								);
+							})
+						) : (
+							<TableRow>
+								<TableCell ColSpan="6" align="center">
+									<CircularProgress
+										className={classes.progress}
+										variant="determinate"
+										value={this.state.completed}
+									/>
+								</TableCell>
+							</TableRow>
+						)}
 					</TableBody>
 				</Table>
 			</Paper>
